@@ -1,0 +1,469 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  background: #10151a;
+  color: white;
+
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  touch-action: none;
+}
+
+
+/* =========================
+   GAME CANVAS
+========================= */
+
+canvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  background: #263b2b;
+}
+
+
+/* =========================
+   FULL SCREEN MENUS
+========================= */
+
+.screen {
+  position: fixed;
+
+  inset: 0;
+
+  display: grid;
+  place-items: center;
+
+  background:
+    linear-gradient(
+      135deg,
+      #09110dcc,
+      #15271dcc
+    );
+
+  z-index: 10;
+}
+
+
+/* =========================
+   MENU CARD
+========================= */
+
+.card {
+  width: min(92vw, 430px);
+
+  padding: 34px 28px;
+
+  border: 1px solid #ffffff2b;
+  border-radius: 22px;
+
+  background: #101820ee;
+
+  box-shadow:
+    0 25px 80px #0009;
+
+  text-align: center;
+}
+
+
+/* Game title */
+
+.card h1 {
+  margin: 0;
+
+  font-size: 42px;
+  font-weight: 900;
+
+  letter-spacing: 5px;
+}
+
+
+/* Subtitle */
+
+.card p {
+  color: #9fb0b8;
+
+  margin-top: 8px;
+  margin-bottom: 25px;
+}
+
+
+/* Buttons */
+
+.card button {
+  border: 0;
+
+  border-radius: 14px;
+
+  padding: 15px 55px;
+
+  font-size: 20px;
+  font-weight: 800;
+
+  background: #f4c542;
+  color: #111;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.1s,
+    filter 0.1s;
+}
+
+
+.card button:hover {
+  filter: brightness(1.08);
+}
+
+
+.card button:active {
+  transform: scale(0.97);
+}
+
+
+/* =========================
+   HELP TEXT
+========================= */
+
+.help {
+  margin-top: 22px;
+
+  font-size: 13px;
+
+  line-height: 1.7;
+
+  color: #aab7bd;
+}
+
+
+/* =========================
+   HIDDEN ELEMENT
+========================= */
+
+.hidden {
+  display: none !important;
+}
+
+
+/* =========================
+   GAME HUD
+========================= */
+
+#hud {
+  position: fixed;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  z-index: 3;
+}
+
+
+/* =========================
+   TOP STATUS BAR
+========================= */
+
+.topbar {
+  position: fixed;
+
+  top: 12px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  display: flex;
+
+  gap: 18px;
+
+  padding: 10px 15px;
+
+  border-radius: 14px;
+
+  background: #071018aa;
+
+  backdrop-filter: blur(8px);
+
+  font-size: 14px;
+
+  white-space: nowrap;
+
+  box-shadow:
+    0 5px 25px #0005;
+}
+
+
+.topbar span {
+  color: #d4dde1;
+}
+
+
+.topbar b {
+  color: #ffffff;
+}
+
+
+.topbar span:first-child b {
+  color: #72ef9b;
+}
+
+
+/* =========================
+   GAME MESSAGE
+========================= */
+
+#message {
+  position: fixed;
+
+  top: 65px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  font-weight: 800;
+
+  color: #ff6b6b;
+
+  text-shadow:
+    0 2px 5px #000;
+
+  z-index: 3;
+
+  white-space: nowrap;
+}
+
+
+/* =========================
+   CROSSHAIR
+========================= */
+
+#crosshair {
+  position: fixed;
+
+  width: 18px;
+  height: 18px;
+
+  border: 2px solid white;
+
+  border-radius: 50%;
+
+  left: 50%;
+  top: 50%;
+
+  transform:
+    translate(-50%, -50%);
+
+  opacity: 0.7;
+
+  pointer-events: none;
+}
+
+
+/* =========================
+   MOBILE CONTROLS
+========================= */
+
+#mobileControls {
+  position: fixed;
+
+  inset: 0;
+
+  pointer-events: none;
+}
+
+
+/* Virtual joystick */
+
+#stick {
+  position: absolute;
+
+  left: 25px;
+  bottom: 25px;
+
+  width: 125px;
+  height: 125px;
+
+  border-radius: 50%;
+
+  background: #ffffff16;
+
+  border: 2px solid #ffffff35;
+
+  pointer-events: auto;
+
+  user-select: none;
+}
+
+
+/* Joystick knob */
+
+#knob {
+  position: absolute;
+
+  width: 55px;
+  height: 55px;
+
+  border-radius: 50%;
+
+  left: 33px;
+  top: 33px;
+
+  background: #ffffff40;
+
+  border: 1px solid #ffffff55;
+
+  transition:
+    transform 0.05s linear;
+}
+
+
+/* =========================
+   MOBILE RELOAD BUTTON
+========================= */
+
+#reload {
+  position: absolute;
+
+  right: 28px;
+  bottom: 38px;
+
+  width: 68px;
+  height: 68px;
+
+  border: 1px solid #ffffff44;
+
+  border-radius: 50%;
+
+  background: #111b;
+
+  color: white;
+
+  font-size: 30px;
+
+  pointer-events: auto;
+
+  user-select: none;
+
+  cursor: pointer;
+}
+
+
+#reload:active {
+  transform: scale(0.92);
+
+  background: #ffffff25;
+}
+
+
+/* =========================
+   DESKTOP
+========================= */
+
+@media (min-width: 700px) {
+
+  #mobileControls {
+    display: none;
+  }
+
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 699px) {
+
+  #crosshair {
+    display: none;
+  }
+
+
+  .topbar {
+    top: 7px;
+
+    gap: 10px;
+
+    padding: 8px 10px;
+
+    font-size: 12px;
+  }
+
+
+  .card {
+    padding: 28px 20px;
+  }
+
+
+  .card h1 {
+    font-size: 34px;
+
+    letter-spacing: 4px;
+  }
+
+
+  .card button {
+    padding: 14px 45px;
+  }
+
+
+  .help {
+    font-size: 12px;
+  }
+
+}
+
+
+/* =========================
+   SMALL PHONES
+========================= */
+
+@media (max-width: 380px) {
+
+  .topbar {
+    gap: 7px;
+
+    font-size: 10px;
+  }
+
+
+  #stick {
+    width: 110px;
+    height: 110px;
+  }
+
+
+  #knob {
+    width: 50px;
+    height: 50px;
+
+    left: 28px;
+    top: 28px;
+  }
+
+
+  #reload {
+    width: 60px;
+    height: 60px;
+
+    right: 20px;
+    bottom: 28px;
+  }
+
+}
