@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  >
+
+  <title>Last Zone — Battle Royale</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Main Menu -->
+  <div id="menu" class="screen">
+    <div class="card">
+      <h1>LAST ZONE</h1>
+
+      <p>Battle Royale Prototype</p>
+
+      <button id="startBtn">PLAY</button>
+
+      <div class="help">
+        <b>Desktop:</b>
+        WASD / Arrow Keys to move · Mouse to aim ·
+        Click to shoot · R to reload
+        <br><br>
+
+        <b>Mobile:</b>
+        Left stick to move · Right side to aim/shoot
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Game Canvas -->
+  <canvas id="game"></canvas>
+
+
+  <!-- Game HUD -->
+  <div id="hud" class="hidden">
+
+    <div class="topbar">
+
+      <span>
+        ❤️ <b id="hp">100</b>
+      </span>
+
+      <span>
+        🔫 <b id="ammo">12</b>/60
+      </span>
+
+      <span>
+        👥 <b id="alive">16</b>
+      </span>
+
+      <span>
+        ⭕ <b id="zone">100</b>%
+      </span>
+
+    </div>
+
+
+    <!-- Zone warning / messages -->
+    <div id="message"></div>
+
+
+    <!-- Crosshair -->
+    <div id="crosshair"></div>
+
+
+    <!-- Mobile Controls -->
+    <div id="mobileControls">
+
+      <div id="stick">
+        <div id="knob"></div>
+      </div>
+
+      <button id="reload">↻</button>
+
+    </div>
+
+  </div>
+
+
+  <!-- Game Over / Victory -->
+  <div id="end" class="screen hidden">
+
+    <div class="card">
+
+      <h1 id="endTitle">GAME OVER</h1>
+
+      <p id="endText"></p>
+
+      <button id="againBtn">
+        PLAY AGAIN
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- Game JavaScript -->
+  <script src="game.js"></script>
+
+</body>
+</html>
