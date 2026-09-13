@@ -1612,13 +1612,73 @@ document
 canvas.addEventListener(
   "touchstart",
   function (e) {
+    if (e.touches.length > 0) {
+      const touch = e.touches[0];
 
-    if (
-      e.touches.length > 0
-    ) {
+      mouse.x = touch.clientX;
+      mouse.y = touch.clientY;
+      mouse.down = true;
+    }
+  },
+  {
+    passive: true
+  }
+);
 
-      const touch =
-        e.touches[0];
+
+canvas.addEventListener(
+  "touchmove",
+  function (e) {
+    if (e.touches.length > 0) {
+      const touch = e.touches[0];
+
+      mouse.x = touch.clientX;
+      mouse.y = touch.clientY;
+    }
+  },
+  {
+    passive: true
+  }
+);
 
 
-      mouse.x =
+canvas.addEventListener(
+  "touchend",
+  function () {
+    mouse.down = false;
+  }
+);
+
+
+canvas.addEventListener(
+  "touchcancel",
+  function () {
+    mouse.down = false;
+  }
+);
+
+
+// ========================================
+// GAME LOOP
+// ========================================
+
+function gameLoop(timestamp) {
+  const deltaTime =
+    Math.min(
+      0.033,
+      (timestamp - lastTime) / 1000 || 0
+    );
+
+  lastTime = timestamp;
+
+  if (running) {
+    update(deltaTime);
+  }
+
+  draw();
+
+  requestAnimationFrame(gameLoop);
+}
+
+
+requestAnimationFrame(gameLoop);
