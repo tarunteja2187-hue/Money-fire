@@ -1,22 +1,17 @@
-// ============================================================
-// LAST ZONE - BATTLE ROYALE
-// Complete mobile + desktop game.js
-// ============================================================
-
-const canvas = document.getElementById("game");
+  const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let W = window.innerWidth;
-let H = window.innerHeight;
-let DPR = window.devicePixelRatio || 1;
+let W = 0;
+let H = 0;
+let DPR = 1;
 
 function resize() {
   W = window.innerWidth;
   H = window.innerHeight;
   DPR = window.devicePixelRatio || 1;
 
-  canvas.width = Math.floor(W * DPR);
-  canvas.height = Math.floor(H * DPR);
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
 
   canvas.style.width = W + "px";
   canvas.style.height = H + "px";
@@ -28,9 +23,9 @@ window.addEventListener("resize", resize);
 resize();
 
 
-// ============================================================
+// =====================================================
 // INPUT
-// ============================================================
+// =====================================================
 
 const keys = {};
 
@@ -41,11 +36,9 @@ const mouse = {
 };
 
 window.addEventListener("keydown", function (e) {
-  const key = e.key.toLowerCase();
+  keys[e.key.toLowerCase()] = true;
 
-  keys[key] = true;
-
-  if (key === "r") {
+  if (e.key.toLowerCase() === "r") {
     reload();
   }
 });
@@ -68,9 +61,9 @@ window.addEventListener("mouseup", function () {
 });
 
 
-// ============================================================
+// =====================================================
 // WORLD
-// ============================================================
+// =====================================================
 
 const world = {
   width: 3000,
@@ -83,29 +76,25 @@ const camera = {
 };
 
 
-// ============================================================
-// GAME VARIABLES
-// ============================================================
+// =====================================================
+// GAME
+// =====================================================
 
 let player = null;
 let bots = [];
 let bullets = [];
 let loot = [];
-let buildings = [];
-let trees = [];
-
-let zone = null;
 
 let running = false;
+
 let gameTime = 0;
 let lastTime = 0;
-
 let shootTimer = 0;
 
 
-// ============================================================
-// MOBILE CONTROLS
-// ============================================================
+// =====================================================
+// MOBILE
+// =====================================================
 
 const touchMove = {
   x: 0,
@@ -118,16 +107,33 @@ const touchAim = {
   active: false
 };
 
-let joystickPointerId = null;
-let aimPointerId = null;
+let joystickPointer = null;
+let aimPointer = null;
 
 
-// ============================================================
-// UTILITY
-// ============================================================
+// =====================================================
+// SAFE ZONE
+// =====================================================
+
+const zone = {
+  x: 1500,
+  y: 1100,
+  radius: 1050,
+  startRadius: 1050,
+  endRadius: 180
+};
+
+
+// =====================================================
+// HELPERS
+// =====================================================
 
 function random(min, max) {
   return min + Math.random() * (max - min);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function distance(a, b) {
@@ -137,76 +143,18 @@ function distance(a, b) {
   );
 }
 
-function clamp(value, min, max) {
-  return Math.max(
-    min,
-    Math.min(max, value)
-  );
-}
 
-function aliveBots() {
-  return bots.filter(bot => !bot.dead);
-}
-
-
-// ============================================================
-// CREATE MAP
-// ============================================================
-
-function createMap() {
-  buildings = [];
-  trees = [];
-
-  // Buildings
-  const buildingData = [
-    [350, 350, 280, 180],
-    [850, 300, 300, 220],
-    [1450, 280, 280, 180],
-    [2100, 400, 320, 220],
-
-    [400, 900, 320, 230],
-    [1050, 850, 300, 200],
-    [1700, 800, 360, 230],
-    [2300, 900, 300, 220],
-
-    [300, 1500, 300, 210],
-    [900, 1450, 350, 230],
-    [1550, 1450, 300, 220],
-    [2150, 1500, 360, 220],
-
-    [1200, 1850, 300, 180]
-  ];
-
-  for (const data of buildingData) {
-    buildings.push({
-      x: data[0],
-      y: data[1],
-      width: data[2],
-      height: data[3]
-    });
-  }
-
-  // Trees
-  for (let i = 0; i < 120; i++) {
-    trees.push({
-      x: random(80, world.width - 80),
-      y: random(80, world.height - 80),
-      size: random(18, 32)
-    });
-  }
-}
-
-
-// ============================================================
+// =====================================================
 // START GAME
-// ============================================================
+// =====================================================
 
 function resetGame() {
-  player = {
-    x: world.width / 2,
-    y: world.height / 2,
 
-    radius: 22,
+  player = {
+    x: 1500,
+    y: 1100,
+
+    radius: 25,
 
     hp: 100,
     maxHp: 100,
@@ -233,90 +181,82 @@ function resetGame() {
   touchMove.x = 0;
   touchMove.y = 0;
 
-  touchAim.x = 0;
-  touchAim.y = 0;
   touchAim.active = false;
 
-  createMap();
+  zone.radius = zone.startRadius;
 
-  // ----------------------------------------------------------
-  // CREATE ENEMIES
-  // ----------------------------------------------------------
+
+  // ===================================================
+  // ENEMIES
+  // ===================================================
 
   for (let i = 0; i < 15; i++) {
-    let x;
-    let y;
 
-    // Spawn enemies around the player
-    // but not too close.
-    const angle = random(0, Math.PI * 2);
-    const radius = random(450, 950);
+    const a =
+      Math.random() *
+      Math.PI *
+      2;
 
-    x =
-      player.x +
-      Math.cos(angle) * radius;
-
-    y =
-      player.y +
-      Math.sin(angle) * radius;
-
-    x = clamp(x, 80, world.width - 80);
-    y = clamp(y, 80, world.height - 80);
+    const r =
+      random(500, 900);
 
     bots.push({
-      x: x,
-      y: y,
 
-      radius: 21,
+      x:
+        player.x +
+        Math.cos(a) * r,
+
+      y:
+        player.y +
+        Math.sin(a) * r,
+
+      radius: 24,
 
       hp: 60,
       maxHp: 60,
 
-      speed: random(75, 115),
-
-      cooldown: random(0.5, 1.5),
+      speed: random(70, 110),
 
       angle: 0,
 
-      dead: false,
+      cooldown:
+        random(0.5, 1.5),
 
-      wanderAngle: random(0, Math.PI * 2)
+      dead: false
     });
   }
 
-  // ----------------------------------------------------------
-  // SAFE ZONE
-  // ----------------------------------------------------------
 
-  zone = {
-    x: world.width / 2,
-    y: world.height / 2,
-
-    startRadius: 1050,
-    targetRadius: 180,
-
-    radius: 1050,
-
-    phase: 0
-  };
-
-  // ----------------------------------------------------------
+  // ===================================================
   // LOOT
-  // ----------------------------------------------------------
+  // ===================================================
 
-  for (let i = 0; i < 35; i++) {
+  for (let i = 0; i < 30; i++) {
+
     loot.push({
-      x: random(100, world.width - 100),
-      y: random(100, world.height - 100),
+
+      x: random(
+        100,
+        world.width - 100
+      ),
+
+      y: random(
+        100,
+        world.height - 100
+      ),
 
       type:
         Math.random() < 0.65
           ? "ammo"
-          : "med"
+          : "med",
+
+      collected: false
     });
   }
 
+
   running = true;
+
 
   document
     .getElementById("menu")
@@ -330,42 +270,59 @@ function resetGame() {
     .getElementById("hud")
     .classList.remove("hidden");
 
-  // Center camera immediately.
-  updateCamera();
 
+  updateCamera();
   updateHUD();
 }
 
 
-// ============================================================
+// =====================================================
 // CAMERA
-// ============================================================
+// =====================================================
 
 function updateCamera() {
+
   if (!player) {
     return;
   }
 
-  camera.x = clamp(
-    player.x - W / 2,
-    0,
-    Math.max(0, world.width - W)
-  );
+  camera.x =
+    player.x -
+    W / 2;
 
-  camera.y = clamp(
-    player.y - H / 2,
-    0,
-    Math.max(0, world.height - H)
-  );
+  camera.y =
+    player.y -
+    H / 2;
+
+  camera.x =
+    clamp(
+      camera.x,
+      0,
+      Math.max(
+        0,
+        world.width - W
+      )
+    );
+
+  camera.y =
+    clamp(
+      camera.y,
+      0,
+      Math.max(
+        0,
+        world.height - H
+      )
+    );
 }
 
 
-// ============================================================
+// =====================================================
 // RELOAD
-// ============================================================
+// =====================================================
 
 function reload() {
-  if (!running || !player) {
+
+  if (!running) {
     return;
   }
 
@@ -377,21 +334,23 @@ function reload() {
     return;
   }
 
-  const needed = 12 - player.ammo;
+  const need =
+    12 - player.ammo;
 
-  const amount = Math.min(
-    needed,
-    player.reserveAmmo
-  );
+  const amount =
+    Math.min(
+      need,
+      player.reserveAmmo
+    );
 
   player.ammo += amount;
   player.reserveAmmo -= amount;
 }
 
 
-// ============================================================
+// =====================================================
 // SHOOT
-// ============================================================
+// =====================================================
 
 function shoot(
   owner,
@@ -401,30 +360,38 @@ function shoot(
   damage,
   speed
 ) {
+
   bullets.push({
+
     x: x,
     y: y,
 
-    vx: Math.cos(angle) * speed,
-    vy: Math.sin(angle) * speed,
+    vx:
+      Math.cos(angle) *
+      speed,
 
-    life: 1.4,
+    vy:
+      Math.sin(angle) *
+      speed,
 
     owner: owner,
 
     damage: damage,
+
+    life: 1.5,
 
     radius: 5
   });
 }
 
 
-// ============================================================
+// =====================================================
 // PLAYER SHOOT
-// ============================================================
+// =====================================================
 
 function playerShoot() {
-  if (!player || !running) {
+
+  if (!player) {
     return;
   }
 
@@ -436,13 +403,16 @@ function playerShoot() {
   player.ammo--;
 
   shoot(
+
     "player",
 
     player.x +
-      Math.cos(player.angle) * 30,
+      Math.cos(player.angle) *
+      35,
 
     player.y +
-      Math.sin(player.angle) * 30,
+      Math.sin(player.angle) *
+      35,
 
     player.angle,
 
@@ -455,141 +425,171 @@ function playerShoot() {
 }
 
 
-// ============================================================
-// PLAYER MOVEMENT
-// ============================================================
+// =====================================================
+// PLAYER
+// =====================================================
 
 function updatePlayer(dt) {
-  let moveX = 0;
-  let moveY = 0;
+
+  let mx = 0;
+  let my = 0;
+
 
   // Keyboard
   if (
     keys["w"] ||
     keys["arrowup"]
   ) {
-    moveY -= 1;
+    my -= 1;
   }
 
   if (
     keys["s"] ||
     keys["arrowdown"]
   ) {
-    moveY += 1;
+    my += 1;
   }
 
   if (
     keys["a"] ||
     keys["arrowleft"]
   ) {
-    moveX -= 1;
+    mx -= 1;
   }
 
   if (
     keys["d"] ||
     keys["arrowright"]
   ) {
-    moveX += 1;
+    mx += 1;
   }
+
 
   // Mobile joystick
-  moveX += touchMove.x;
-  moveY += touchMove.y;
+  mx += touchMove.x;
+  my += touchMove.y;
 
-  const length = Math.hypot(
-    moveX,
-    moveY
-  );
 
-  if (length > 0) {
-    moveX /= length;
-    moveY /= length;
+  const len =
+    Math.hypot(mx, my);
+
+
+  if (len > 0) {
+    mx /= len;
+    my /= len;
   }
 
+
   player.x +=
-    moveX *
+    mx *
     player.speed *
     dt;
 
   player.y +=
-    moveY *
+    my *
     player.speed *
     dt;
 
-  player.x = clamp(
-    player.x,
-    35,
-    world.width - 35
-  );
 
-  player.y = clamp(
-    player.y,
-    35,
-    world.height - 35
-  );
+  player.x =
+    clamp(
+      player.x,
+      30,
+      world.width - 30
+    );
+
+  player.y =
+    clamp(
+      player.y,
+      30,
+      world.height - 30
+    );
 }
 
 
-// ============================================================
-// PLAYER AIM
-// ============================================================
+// =====================================================
+// AIM
+// =====================================================
 
-function updatePlayerAim() {
+function updateAim() {
+
   if (!player) {
     return;
   }
 
-  if (touchAim.active) {
-    player.angle = Math.atan2(
-      touchAim.y +
-        camera.y -
-        player.y,
 
+  let targetX;
+  let targetY;
+
+
+  if (touchAim.active) {
+
+    targetX =
       touchAim.x +
-        camera.x -
-        player.x
-    );
+      camera.x;
+
+    targetY =
+      touchAim.y +
+      camera.y;
+
   }
   else {
-    player.angle = Math.atan2(
-      mouse.y +
-        camera.y -
-        player.y,
 
+    targetX =
       mouse.x +
-        camera.x -
-        player.x
-    );
+      camera.x;
+
+    targetY =
+      mouse.y +
+      camera.y;
+
   }
+
+
+  player.angle =
+    Math.atan2(
+      targetY - player.y,
+      targetX - player.x
+    );
 }
 
 
-// ============================================================
-// ENEMY AI
-// ============================================================
+// =====================================================
+// ENEMIES
+// =====================================================
 
 function updateBots(dt) {
+
   for (const bot of bots) {
+
     if (bot.dead) {
       continue;
     }
 
-    bot.cooldown -= dt;
 
-    const d = distance(
-      bot,
-      player
-    );
+    const d =
+      distance(
+        bot,
+        player
+      );
 
-    const angle = Math.atan2(
-      player.y - bot.y,
-      player.x - bot.x
-    );
+
+    const angle =
+      Math.atan2(
+        player.y - bot.y,
+        player.x - bot.x
+      );
+
 
     bot.angle = angle;
 
+
+    bot.cooldown -= dt;
+
+
     // Chase player
-    if (d > 360) {
+    if (d > 300) {
+
       bot.x +=
         Math.cos(angle) *
         bot.speed *
@@ -600,66 +600,54 @@ function updateBots(dt) {
         bot.speed *
         dt;
     }
-    else if (d < 190) {
-      // Move away if too close
-      bot.x -=
-        Math.cos(angle) *
-        bot.speed *
-        0.7 *
-        dt;
 
-      bot.y -=
-        Math.sin(angle) *
-        bot.speed *
-        0.7 *
-        dt;
-    }
 
-    // Keep inside world
-    bot.x = clamp(
-      bot.x,
-      30,
-      world.width - 30
-    );
-
-    bot.y = clamp(
-      bot.y,
-      30,
-      world.height - 30
-    );
-
-    // Shoot player
+    // Shoot
     if (
       d < 700 &&
       bot.cooldown <= 0
     ) {
+
       shoot(
+
         "bot",
 
         bot.x +
-          Math.cos(angle) * 25,
+          Math.cos(angle) *
+          30,
 
         bot.y +
-          Math.sin(angle) * 25,
+          Math.sin(angle) *
+          30,
 
         angle,
 
         10,
 
-        600
+        550
       );
 
       bot.cooldown =
-        random(0.8, 1.6);
+        random(
+          0.8,
+          1.6
+        );
     }
+
 
     // Zone damage
     if (
-      distance(bot, zone) >
+      distance(
+        bot,
+        zone
+      ) >
       zone.radius
     ) {
-      bot.hp -= 8 * dt;
+
+      bot.hp -=
+        8 * dt;
     }
+
 
     if (bot.hp <= 0) {
       bot.dead = true;
@@ -668,12 +656,14 @@ function updateBots(dt) {
 }
 
 
-// ============================================================
-// UPDATE BULLETS
-// ============================================================
+// =====================================================
+// BULLETS
+// =====================================================
 
 function updateBullets(dt) {
+
   for (const bullet of bullets) {
+
     bullet.x +=
       bullet.vx * dt;
 
@@ -682,60 +672,73 @@ function updateBullets(dt) {
 
     bullet.life -= dt;
 
-    // Outside world
+
     if (
       bullet.x < 0 ||
       bullet.y < 0 ||
-      bullet.x > world.width ||
-      bullet.y > world.height
+      bullet.x >
+        world.width ||
+      bullet.y >
+        world.height
     ) {
+
       bullet.life = 0;
     }
 
+
     // Player bullet
     if (
-      bullet.owner === "player"
+      bullet.owner ===
+      "player"
     ) {
+
       for (const bot of bots) {
+
         if (bot.dead) {
           continue;
         }
+
 
         if (
           distance(
             bullet,
             bot
           ) <
-          bot.radius +
-          bullet.radius
+          bullet.radius +
+          bot.radius
         ) {
+
           bot.hp -=
             bullet.damage;
 
           bullet.life = 0;
 
-          createHitEffect(
-            bot.x,
-            bot.y
-          );
 
           if (bot.hp <= 0) {
+
             bot.dead = true;
 
             player.kills++;
 
-            // Drop loot
+
             if (
-              Math.random() < 0.75
+              Math.random() <
+              0.7
             ) {
+
               loot.push({
+
                 x: bot.x,
                 y: bot.y,
 
                 type:
-                  Math.random() < 0.65
+                  Math.random() <
+                  0.65
                     ? "ammo"
-                    : "med"
+                    : "med",
+
+                collected:
+                  false
               });
             }
           }
@@ -745,285 +748,219 @@ function updateBullets(dt) {
       }
     }
 
+
     // Enemy bullet
-    else {
+    if (
+      bullet.owner ===
+      "bot"
+    ) {
+
       if (
         distance(
           bullet,
           player
         ) <
-        player.radius +
-        bullet.radius
+        bullet.radius +
+        player.radius
       ) {
+
         player.hp -=
           bullet.damage;
 
         bullet.life = 0;
-
-        createHitEffect(
-          player.x,
-          player.y
-        );
       }
     }
   }
 
-  bullets = bullets.filter(
-    bullet =>
-      bullet.life > 0
-  );
+
+  bullets =
+    bullets.filter(
+      b =>
+        b.life > 0
+    );
 }
 
 
-// ============================================================
-// HIT EFFECTS
-// ============================================================
-
-const effects = [];
-
-function createHitEffect(x, y) {
-  effects.push({
-    x: x,
-    y: y,
-    life: 0.25,
-    maxLife: 0.25
-  });
-}
-
-function updateEffects(dt) {
-  for (const effect of effects) {
-    effect.life -= dt;
-  }
-
-  while (
-    effects.length &&
-    effects[0].life <= 0
-  ) {
-    effects.shift();
-  }
-}
-
-
-// ============================================================
-// PICKUPS
-// ============================================================
+// =====================================================
+// LOOT
+// =====================================================
 
 function updateLoot() {
+
   for (const item of loot) {
+
+    if (item.collected) {
+      continue;
+    }
+
+
     if (
       distance(
         item,
         player
-      ) < 42
+      ) < 45
     ) {
+
       if (
-        item.type === "ammo"
+        item.type ===
+        "ammo"
       ) {
+
         player.reserveAmmo =
           Math.min(
             120,
-            player.reserveAmmo + 30
+            player.reserveAmmo +
+              30
           );
+
       }
       else {
+
         player.hp =
           Math.min(
             100,
-            player.hp + 30
+            player.hp + 25
           );
       }
+
 
       item.collected = true;
     }
   }
 
-  loot = loot.filter(
-    item =>
-      !item.collected
-  );
+
+  loot =
+    loot.filter(
+      item =>
+        !item.collected
+    );
 }
 
 
-// ============================================================
-// UPDATE SAFE ZONE
-// ============================================================
+// =====================================================
+// ZONE
+// =====================================================
 
 function updateZone(dt) {
-  zone.phase = clamp(
-    gameTime / 120,
-    0,
-    1
-  );
+
+  const progress =
+    clamp(
+      gameTime / 120,
+      0,
+      1
+    );
+
 
   zone.radius =
     zone.startRadius -
     (
       zone.startRadius -
-      zone.targetRadius
+      zone.endRadius
     ) *
-    zone.phase;
+    progress;
+
 
   if (
     distance(
       player,
       zone
-    ) > zone.radius
+    ) >
+    zone.radius
   ) {
+
     player.hp -=
-      11 * dt;
+      10 * dt;
   }
 }
 
 
-// ============================================================
-// UPDATE HUD
-// ============================================================
+// =====================================================
+// HUD
+// =====================================================
 
 function updateHUD() {
+
   if (!player) {
     return;
   }
 
+
   const alive =
-    aliveBots().length + 1;
+    bots.filter(
+      bot =>
+        !bot.dead
+    ).length + 1;
 
-  const hpElement =
-    document.getElementById("hp");
 
-  const ammoElement =
-    document.getElementById("ammo");
-
-  const aliveElement =
-    document.getElementById("alive");
-
-  const zoneElement =
-    document.getElementById("zone");
-
-  if (hpElement) {
-    hpElement.textContent =
-      Math.max(
-        0,
-        Math.ceil(player.hp)
-      );
-  }
-
-  if (ammoElement) {
-    ammoElement.textContent =
-      player.ammo +
-      "/" +
-      player.reserveAmmo;
-  }
-
-  if (aliveElement) {
-    aliveElement.textContent =
-      alive;
-  }
-
-  if (zoneElement) {
-    zoneElement.textContent =
+  document.getElementById(
+    "hp"
+  ).textContent =
+    Math.max(
+      0,
       Math.ceil(
-        (
-          zone.radius /
-          zone.startRadius
-        ) * 100
-      );
-  }
+        player.hp
+      )
+    );
+
+
+  document.getElementById(
+    "ammo"
+  ).textContent =
+    player.ammo +
+    "/" +
+    player.reserveAmmo;
+
+
+  document.getElementById(
+    "alive"
+  ).textContent =
+    alive;
+
+
+  document.getElementById(
+    "zone"
+  ).textContent =
+    Math.ceil(
+      zone.radius /
+      zone.startRadius *
+      100
+    );
+
 
   const message =
     document.getElementById(
       "message"
     );
 
-  if (message) {
-    if (
-      distance(
-        player,
-        zone
-      ) > zone.radius
-    ) {
-      message.textContent =
-        "⚠ OUTSIDE SAFE ZONE!";
-    }
-    else {
-      message.textContent = "";
-    }
+
+  if (
+    distance(
+      player,
+      zone
+    ) >
+    zone.radius
+  ) {
+
+    message.textContent =
+      "⚠ OUTSIDE SAFE ZONE!";
+
+  }
+  else {
+
+    message.textContent =
+      "";
   }
 }
 
 
-// ============================================================
-// MAIN UPDATE
-// ============================================================
-
-function update(dt) {
-  if (!player) {
-    return;
-  }
-
-  gameTime += dt;
-
-  shootTimer -= dt;
-
-  updatePlayer(dt);
-
-  updateCamera();
-
-  updatePlayerAim();
-
-  // Desktop shooting
-  if (
-    mouse.down &&
-    shootTimer <= 0
-  ) {
-    playerShoot();
-  }
-
-  // Mobile shooting
-  if (
-    touchAim.active &&
-    shootTimer <= 0
-  ) {
-    playerShoot();
-  }
-
-  updateBots(dt);
-
-  updateBullets(dt);
-
-  updateLoot();
-
-  updateZone(dt);
-
-  updateEffects(dt);
-
-  updateHUD();
-
-  // Death
-  if (player.hp <= 0) {
-    player.hp = 0;
-
-    finishGame(false);
-
-    return;
-  }
-
-  // Victory
-  if (
-    aliveBots().length === 0
-  ) {
-    finishGame(true);
-
-    return;
-  }
-}
-
-
-// ============================================================
+// =====================================================
 // DRAW GROUND
-// ============================================================
+// =====================================================
 
 function drawGround() {
-  ctx.fillStyle = "#294b32";
+
+  ctx.fillStyle =
+    "#263b40";
 
   ctx.fillRect(
     0,
@@ -1032,17 +969,20 @@ function drawGround() {
     world.height
   );
 
+
   // Grid
   ctx.strokeStyle =
     "rgba(255,255,255,0.055)";
 
   ctx.lineWidth = 1;
 
+
   for (
     let x = 0;
-    x <= world.width;
+    x < world.width;
     x += 100
   ) {
+
     ctx.beginPath();
 
     ctx.moveTo(
@@ -1058,11 +998,13 @@ function drawGround() {
     ctx.stroke();
   }
 
+
   for (
     let y = 0;
-    y <= world.height;
+    y < world.height;
     y += 100
   ) {
+
     ctx.beginPath();
 
     ctx.moveTo(
@@ -1080,176 +1022,459 @@ function drawGround() {
 }
 
 
-// ============================================================
-// DRAW TREES
-// ============================================================
+// =====================================================
+// DRAW WORLD DECORATIONS
+// =====================================================
 
-function drawTrees() {
-  for (const tree of trees) {
-    // Shadow
+function drawDecorations() {
+
+  // Trees / rocks
+  const objects = [
+    [300, 300],
+    [700, 500],
+    [1200, 300],
+    [1900, 400],
+    [2500, 550],
+
+    [350, 950],
+    [900, 800],
+    [1800, 850],
+    [2500, 900],
+
+    [400, 1600],
+    [1100, 1500],
+    [1700, 1550],
+    [2400, 1600],
+
+    [800, 1900],
+    [2000, 1900]
+  ];
+
+
+  for (const obj of objects) {
+
+    const x = obj[0];
+    const y = obj[1];
+
+
     ctx.fillStyle =
-      "rgba(0,0,0,0.18)";
+      "#102c20";
 
     ctx.beginPath();
 
-    ctx.ellipse(
-      tree.x,
-      tree.y + tree.size * 0.55,
-      tree.size * 0.9,
-      tree.size * 0.35,
-      0,
+    ctx.arc(
+      x,
+      y,
+      45,
       0,
       Math.PI * 2
     );
 
     ctx.fill();
 
-    // Trunk
-    ctx.fillStyle = "#63462e";
 
-    ctx.fillRect(
-      tree.x - 5,
-      tree.y,
-      10,
-      tree.size
-    );
-
-    // Leaves
-    ctx.fillStyle = "#163d24";
+    ctx.fillStyle =
+      "#1d5230";
 
     ctx.beginPath();
 
     ctx.arc(
-      tree.x,
-      tree.y - 5,
-      tree.size,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fill();
-
-    ctx.fillStyle = "#245a31";
-
-    ctx.beginPath();
-
-    ctx.arc(
-      tree.x - 6,
-      tree.y - 10,
-      tree.size * 0.65,
+      x - 8,
+      y - 10,
+      30,
       0,
       Math.PI * 2
     );
 
     ctx.fill();
   }
-}
 
 
-// ============================================================
-// DRAW BUILDINGS
-// ============================================================
+  // Buildings
+  const buildings = [
+    [500, 400, 260, 170],
+    [1150, 500, 280, 190],
+    [2050, 400, 300, 200],
 
-function drawBuildings() {
-  for (const building of buildings) {
-    // Shadow
+    [400, 1050, 300, 200],
+    [1300, 900, 300, 190],
+    [2150, 1050, 280, 200],
+
+    [650, 1550, 300, 190],
+    [1550, 1500, 300, 200],
+    [2200, 1650, 300, 190]
+  ];
+
+
+  for (const b of buildings) {
+
+    const x = b[0];
+    const y = b[1];
+    const w = b[2];
+    const h = b[3];
+
+
     ctx.fillStyle =
-      "rgba(0,0,0,0.25)";
+      "rgba(0,0,0,0.3)";
 
     ctx.fillRect(
-      building.x + 10,
-      building.y + 12,
-      building.width,
-      building.height
+      x + 10,
+      y + 12,
+      w,
+      h
     );
 
-    // Building
-    ctx.fillStyle = "#707982";
+
+    ctx.fillStyle =
+      "#59646b";
 
     ctx.fillRect(
-      building.x,
-      building.y,
-      building.width,
-      building.height
+      x,
+      y,
+      w,
+      h
     );
 
-    // Roof
-    ctx.fillStyle = "#4c565e";
+
+    ctx.fillStyle =
+      "#3d474e";
 
     ctx.fillRect(
-      building.x,
-      building.y,
-      building.width,
-      18
+      x,
+      y,
+      w,
+      20
     );
+
 
     // Windows
-    ctx.fillStyle = "#a9d9df";
+    ctx.fillStyle =
+      "#9ddbe4";
 
-    const cols = Math.max(
-      2,
-      Math.floor(building.width / 75)
-    );
 
-    const rows = Math.max(
-      1,
-      Math.floor(building.height / 75)
-    );
+    for (
+      let wx = x + 30;
+      wx < x + w - 20;
+      wx += 65
+    ) {
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const wx =
-          building.x +
-          25 +
-          c *
-            (
-              (building.width - 50) /
-              Math.max(1, cols - 1)
-            );
-
-        const wy =
-          building.y +
-          45 +
-          r * 65;
+      for (
+        let wy = y + 45;
+        wy < y + h - 25;
+        wy += 65
+      ) {
 
         ctx.fillRect(
-          wx - 10,
-          wy - 8,
-          20,
+          wx,
+          wy,
+          22,
           16
         );
       }
     }
-
-    // Door
-    ctx.fillStyle = "#30363b";
-
-    ctx.fillRect(
-      building.x +
-        building.width / 2 -
-        14,
-
-      building.y +
-        building.height -
-        45,
-
-      28,
-      45
-    );
   }
 }
 
 
-// ============================================================
-// DRAW SAFE ZONE
-// ============================================================
+// =====================================================
+// DRAW LOOT
+// =====================================================
 
-function drawZone() {
-  // Dark area outside zone
-  ctx.save();
+function drawLoot() {
+
+  for (const item of loot) {
+
+    ctx.save();
+
+    ctx.shadowBlur = 15;
+
+    ctx.shadowColor =
+      item.type === "ammo"
+        ? "#ffd43b"
+        : "#43f07b";
+
+
+    ctx.fillStyle =
+      item.type === "ammo"
+        ? "#ffd43b"
+        : "#43f07b";
+
+
+    ctx.fillRect(
+      item.x - 10,
+      item.y - 10,
+      20,
+      20
+    );
+
+
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle =
+      "#172018";
+
+    ctx.font =
+      "bold 14px Arial";
+
+    ctx.textAlign =
+      "center";
+
+    ctx.textBaseline =
+      "middle";
+
+
+    ctx.fillText(
+      item.type === "ammo"
+        ? "A"
+        : "+",
+
+      item.x,
+      item.y
+    );
+
+
+    ctx.restore();
+  }
+}
+
+
+// =====================================================
+// DRAW BULLETS
+// =====================================================
+
+function drawBullets() {
+
+  for (const bullet of bullets) {
+
+    ctx.fillStyle =
+      bullet.owner ===
+      "player"
+        ? "#fff06a"
+        : "#ff5555";
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+      bullet.x,
+      bullet.y,
+      bullet.radius,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+  }
+}
+
+
+// =====================================================
+// DRAW HEALTH BAR
+// =====================================================
+
+function drawHealthBar(
+  character
+) {
+
+  const width = 60;
+  const height = 7;
+
+
+  const x =
+    character.x -
+    width / 2;
+
+
+  const y =
+    character.y -
+    character.radius -
+    18;
+
 
   ctx.fillStyle =
-    "rgba(10,18,35,0.62)";
+    "#000";
+
+  ctx.fillRect(
+    x,
+    y,
+    width,
+    height
+  );
+
+
+  ctx.fillStyle =
+    character ===
+    player
+      ? "#39ed76"
+      : "#ff4f4f";
+
+
+  ctx.fillRect(
+    x,
+    y,
+    width *
+      Math.max(
+        0,
+        character.hp /
+        character.maxHp
+      ),
+    height
+  );
+}
+
+
+// =====================================================
+// DRAW CHARACTER
+// =====================================================
+
+function drawCharacter(
+  character,
+  isPlayer
+) {
+
+  ctx.save();
+
+
+  ctx.translate(
+    character.x,
+    character.y
+  );
+
+
+  ctx.rotate(
+    character.angle
+  );
+
+
+  // Shadow
+  ctx.fillStyle =
+    "rgba(0,0,0,0.45)";
+
+  ctx.beginPath();
+
+  ctx.ellipse(
+    0,
+    25,
+    28,
+    11,
+    0,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  // Weapon
+  ctx.fillStyle =
+    "#111";
+
+  ctx.fillRect(
+    8,
+    -7,
+    42,
+    14
+  );
+
+
+  ctx.fillStyle =
+    "#39434b";
+
+  ctx.fillRect(
+    42,
+    -4,
+    16,
+    8
+  );
+
+
+  // Body
+  ctx.fillStyle =
+    isPlayer
+      ? "#168cff"
+      : "#ff414f";
+
+
+  ctx.strokeStyle =
+    "#ffffff";
+
+  ctx.lineWidth = 4;
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    0,
+    0,
+    character.radius,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+  ctx.stroke();
+
+
+  // Head
+  ctx.fillStyle =
+    isPlayer
+      ? "#8bd0ff"
+      : "#ff9999";
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    7,
+    -4,
+    10,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  // Direction marker
+  ctx.fillStyle =
+    "#fff";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    13,
+    -4,
+    3,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  ctx.restore();
+
+
+  drawHealthBar(
+    character
+  );
+}
+
+
+// =====================================================
+// DRAW ZONE
+// =====================================================
+
+function drawZone() {
+
+  // IMPORTANT:
+  // No destination-out here.
+  // This prevents the zone from hiding
+  // characters on mobile.
+
+  ctx.fillStyle =
+    "rgba(20,30,70,0.30)";
 
   ctx.fillRect(
     0,
@@ -1258,9 +1483,13 @@ function drawZone() {
     world.height
   );
 
-  // Remove darkness inside circle
-  ctx.globalCompositeOperation =
-    "destination-out";
+
+  // Safe zone border
+  ctx.strokeStyle =
+    "#58e7ff";
+
+  ctx.lineWidth = 8;
+
 
   ctx.beginPath();
 
@@ -1271,5 +1500,87 @@ function drawZone() {
     0,
     Math.PI * 2
   );
+
+  ctx.stroke();
+}
+
+
+// =====================================================
+// DRAW
+// =====================================================
+
+function draw() {
+
+  ctx.clearRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+
+  // Background
+  ctx.fillStyle =
+    "#17252a";
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+
+  if (!player) {
+    return;
+  }
+
+
+  ctx.save();
+
+
+  ctx.translate(
+    -camera.x,
+    -camera.y
+  );
+
+
+  // Ground
+  drawGround();
+
+
+  // Buildings / trees
+  drawDecorations();
+
+
+  // Zone background
+  drawZone();
+
+
+  // Loot
+  drawLoot();
+
+
+  // Bullets
+  drawBullets();
+
+
+  // =================================================
+  // ENEMIES
+  // =================================================
+
+  for (const bot of bots) {
+
+    if (!bot.dead) {
+
+      drawCharacter(
+        bot,
+        false
+      );
+    }
+  }
+
+
+  // ======================
 
  
